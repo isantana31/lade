@@ -1,0 +1,515 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Laser Wavelength and Intensity Screen</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: one dominant black screen on the left, a narrow rail of three laser cards on the right; stacks on phones. */
+  :root {
+    --bg: #0b0c10;
+    --panel: #13151b;
+    --panel-2: #1a1d25;
+    --line: #262a33;
+    --fg: #e8eaf0;
+    --muted: #8b93a3;
+    --faint: #5d6574;
+    --focus: #9db4ff;
+    --grad: linear-gradient(to right, #333, #888);
+    --font-body: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.45 var(--font-body);
+    padding-block: 16px 24px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .app { max-width: 1440px; margin: 0 auto; display: grid; gap: 16px; }
+  .top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+  .top h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: .01em; }
+  .top p { margin: 0; color: var(--muted); font-size: 13px; }
+
+  .stage { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 1000px) {
+    .stage { grid-template-columns: minmax(0, 1fr) 340px; }
+  }
+
+  /* ---------- screen column ---------- */
+  .view { display: grid; gap: 10px; min-width: 0; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+  .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+  .group-label { color: var(--faint); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-right: 2px; }
+  .pill {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 5px 12px; cursor: pointer; color: var(--muted); font-size: 13px;
+  }
+  .pill:hover { color: var(--fg); border-color: #373c48; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+  .seg button { background: none; border: 0; padding: 5px 12px; cursor: pointer; color: var(--muted); font-size: 13px; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--panel-2); color: var(--fg); }
+  .check { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; cursor: pointer; }
+  .check input { accent-color: var(--fg); width: 15px; height: 15px; margin: 0; }
+
+  .bezel {
+    background: linear-gradient(180deg, #1a1c22, #121318);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 0 0 1px #2a2d36, 0 30px 80px rgba(0,0,0,.65);
+    width: 100%;
+    justify-self: center;
+  }
+  @media (min-width: 1000px) {
+    .bezel { width: min(100%, calc((100vh - 190px) * 1.6 + 28px)); min-width: 520px; }
+  }
+  .screen { position: relative; aspect-ratio: 8 / 5; border-radius: 3px; overflow: hidden; background: #000; box-shadow: inset 0 0 50px rgba(0,0,0,.8); touch-action: none; cursor: crosshair; }
+  .screen canvas { display: block; width: 100%; height: 100%; }
+  .scale { position: absolute; right: 3%; bottom: 4%; width: 12.5%; display: grid; gap: 3px; justify-items: end; font: 11px var(--font-mono); color: rgba(255,255,255,.38); pointer-events: none; }
+  .scale i { display: block; height: 5px; border: 1px solid rgba(255,255,255,.38); border-top: 0; width: 100%; }
+
+  .handle {
+    position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+    border: 1.5px solid var(--hc, #888); background: rgba(0,0,0,.35); color: var(--hc, #888);
+    display: grid; place-items: center; font: 500 11px var(--font-mono); cursor: grab; touch-action: none; padding: 0;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6);
+  }
+  .handle:active { cursor: grabbing; }
+  .handle.off { opacity: .35; }
+  .screen.no-markers .handle { display: none; }
+
+  .status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font: 12px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; min-height: 18px; }
+  .status .rd span { margin-right: 10px; }
+
+  /* ---------- control rail ---------- */
+  .rail { display: grid; gap: 12px; min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 14px; display: grid; gap: 10px; min-width: 0; }
+  .card-h { display: flex; align-items: center; gap: 8px; }
+  .card-h h2 { margin: 0; font-size: 14px; font-weight: 600; flex: 1; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+  .card.off .dot { box-shadow: none; opacity: .35; }
+  .row { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; align-items: center; }
+  .lbl { color: var(--muted); font-size: 12px; }
+
+  .switch { position: relative; display: inline-flex; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .switch .track { width: 34px; height: 20px; border-radius: 999px; background: var(--panel-2); border: 1px solid #343945; position: relative; transition: background .15s; }
+  .switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+  .switch input:checked + .track { background: #2b3244; }
+  .switch input:checked + .track::after { transform: translateX(14px); background: var(--fg); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .wl { display: grid; grid-template-columns: minmax(0, 1fr) 58px 22px; gap: 6px; align-items: center; }
+  .int { display: grid; grid-template-columns: minmax(0, 1fr) 62px; gap: 6px; align-items: center; }
+  .int3 { display: grid; grid-template-columns: minmax(0, 1fr) 62px 28px; gap: 6px; align-items: center; }
+  .inf { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; padding: 0; height: 26px; font-size: 15px; color: var(--muted); }
+  .inf:hover, .inf[aria-pressed="true"] { color: var(--fg); border-color: #3b4150; }
+  .inf[aria-pressed="true"] { background: #2b3244; }
+  .card input[type="range"] { width: 100%; margin: 0; accent-color: var(--c); min-width: 0; }
+  .card input.spec { -webkit-appearance: none; appearance: none; height: 12px; border-radius: 6px; background: var(--grad); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); cursor: pointer; }
+  .spec::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--c); border: 2px solid #f1f3f8; box-shadow: 0 0 0 1px rgba(0,0,0,.7), 0 1px 4px rgba(0,0,0,.6); }
+  .spec::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--c); border: 2px solid #f1f3f8; box-shadow: 0 0 0 1px rgba(0,0,0,.7); }
+  .spec::-moz-range-track { background: transparent; }
+  .num { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; width: 100%; font: 12px var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; min-width: 0; }
+  .num:focus { border-color: var(--focus); outline: none; }
+  .ro { border-color: transparent; background: none; color: var(--muted); padding-right: 0; }
+  .unit { color: var(--faint); font: 11px var(--font-mono); }
+  .hint { margin: 0; color: var(--faint); font-size: 12px; line-height: 1.4; min-height: 34px; }
+  .hint.on { color: var(--muted); }
+
+  .note { color: var(--faint); font-size: 12px; line-height: 1.5; margin: 0; }
+  .note b { color: var(--muted); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <div class="top">
+    <h1>Laser Wavelength and Intensity Screen</h1>
+    <p>Up to three beams on a 160 × 100 mm screen. Drag a marker to move its spot.</p>
+  </div>
+
+  <div class="stage">
+    <div class="view">
+      <div class="toolbar">
+        <div class="group" id="presets" role="group" aria-label="Presets">
+          <span class="group-label">Try</span>
+          <button type="button" class="pill" data-preset="rgb">RGB overlap</button>
+          <button type="button" class="pill" data-preset="cancel">Total cancel</button>
+          <button type="button" class="pill" data-preset="near">Off by 1 nm</button>
+          <button type="button" class="pill" data-preset="odd">Three beams, two cancel</button>
+          <button type="button" class="pill" data-preset="unequal">Unequal pair, 180°</button>
+          <button type="button" class="pill" data-preset="inf">Infinite intensity</button>
+        </div>
+        <div class="group">
+          <span class="group-label" id="surf-l">Screen</span>
+          <div class="seg" id="surface" role="group" aria-labelledby="surf-l">
+            <button type="button" data-surf="black" aria-pressed="true">Black</button>
+            <button type="button" data-surf="grey" aria-pressed="false">Dark grey</button>
+          </div>
+          <label class="check"><input type="checkbox" id="markers" checked> Markers</label>
+        </div>
+      </div>
+
+      <div class="bezel">
+        <div class="screen" id="screen">
+          <canvas id="cv" width="960" height="600" aria-label="Simulated laser spots on the screen"></canvas>
+          <div class="scale" aria-hidden="true"><span>20 mm</span><i></i></div>
+        </div>
+      </div>
+
+      <div class="status" aria-live="off">
+        <span class="rd" id="readout">Hover the screen to read the intensity at a point.</span>
+        <span>Relative intensity, 1 = one beam at its peak</span>
+      </div>
+    </div>
+
+    <div class="rail" id="rail">
+      <p class="note">Beams with <b>exactly the same wavelength</b> add as waves, so a 180° beam subtracts from them. Beams of <b>different wavelengths</b> never cancel; they add as light, even when they differ by 1 nm. Unequal intensities at 180° leave a residual.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const W = 960, H = 600, MM_W = 160, MM_H = 100, PX = MM_W / W;
+  const EXPO = 1.4;          // camera exposure: displayed = 1 - exp(-EXPO * intensity)
+  const WL_MIN = 380, WL_MAX = 750;
+  const SURF = { black: [6, 6, 8], grey: [40, 40, 44] };
+
+  /* ---------- wavelength to color ---------- */
+  // Analytic fit of the CIE 1931 color matching functions (Wyman, Sloan and Shirley, 2013),
+  // converted to linear sRGB, clipped to gamut and scaled so the brightest channel is 1.
+  const lobe = (l, mu, s1, s2) => { const t = (l - mu) / (l < mu ? s1 : s2); return Math.exp(-0.5 * t * t); };
+  const wlLinear = wl0 => {
+    // The fit's far-red tail is numerically unreliable, and the spectral locus is a constant pure red beyond ~650 nm in sRGB,
+    // so the hue is frozen at 650 nm and only the brightness keeps falling.
+    const wl = Math.min(wl0, 650);
+    const X =1.056 * lobe(wl, 599.8, 37.9, 31.0) + 0.362 * lobe(wl, 442.0, 16.0, 26.7) - 0.065 * lobe(wl, 501.1, 20.4, 26.2);
+    const Y = 0.821 * lobe(wl, 568.8, 46.9, 40.5) + 0.286 * lobe(wl, 530.9, 16.3, 31.1);
+    const Z = 1.217 * lobe(wl, 437.0, 11.8, 36.0) + 0.681 * lobe(wl, 459.0, 26.0, 13.8);
+    let r = 3.2406 * X - 1.5372 * Y - 0.4986 * Z;
+    let g = -0.9689 * X + 1.8758 * Y + 0.0415 * Z;
+    let b = 0.0557 * X - 0.2040 * Y + 1.0570 * Z;
+    r = Math.max(0, r); g = Math.max(0, g); b = Math.max(0, b);
+    const m = Math.max(r, g, b, 1e-9);
+    // the eye is far less sensitive at the ends of the visible range
+    let f = 1;
+    if (wl0 < 420) f = 0.3 + 0.7 * (wl0 - 380) / 40;
+    else if (wl0 > 680) f = 0.3 + 0.7 * (750 - wl0) / 70;
+    // channels this small are fit noise; the sRGB encoding would otherwise inflate them into a visible tint
+    const cut = wl0 < 450 ? 0.1 : 0.04;
+    const q = v => v < cut ? 0 : v;
+    return [q(r / m) * f, q(g / m) * f, q(b / m) * f];
+  };
+  const enc = v => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055);
+  const wlCss = wl => { const c = wlLinear(wl); return `rgb(${Math.round(enc(c[0]))},${Math.round(enc(c[1]))},${Math.round(enc(c[2]))})`; };
+  // spectrum strip behind every wavelength slider
+  (() => {
+    const stops = [];
+    for (let l = WL_MIN; l <= WL_MAX; l += 10) stops.push(`${wlCss(l)} ${((l - WL_MIN) / (WL_MAX - WL_MIN) * 100).toFixed(1)}%`);
+    document.documentElement.style.setProperty('--grad', `linear-gradient(to right, ${stops.join(',')})`);
+  })();
+
+  const mk = (wl, ph, x, y, w, on = true, I = 1) => ({ on, wl, ph, x, y, w, I });
+  const PRESETS = {
+    rgb:    () => [mk(650, 0, -12,  7, 18), mk(532, 0, 12,  7, 18), mk(450, 0, 0, -9, 18)],
+    cancel: () => [mk(633, 0,   0,  0, 18), mk(633, 180, 0, 0, 18), mk(450, 0, 26, 0, 12)],
+    near:   () => [mk(633, 0,   0,  0, 18), mk(634, 180, 0, 0, 18), mk(450, 0, 26, 0, 12, false)],
+    odd:    () => [mk(633, 0,  -6,  0, 18), mk(633, 180, 6, 0, 18),  mk(633, 0, 0, 0, 18)],
+    unequal:() => [mk(633, 0,   0,  0, 18), mk(633, 180, 0, 0, 18, true, 0.25), mk(450, 0, 26, 0, 12, false)],
+    inf:    () => [mk(650, 0, -14,  0,  7, true, Infinity), mk(532, 0, 14, 0, 7, true, Infinity), mk(450, 0, 0, 0, 10, false)]
+  };
+
+  const state = { surface: 'black', markers: true, src: PRESETS.rgb() };
+
+  /* ---------- helpers ---------- */
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const keyOf = wl => wl.toFixed(1);
+  const fmtI = v => v < 0.005 ? '0' : v >= 1e5 ? v.toExponential(1) : v.toFixed(v < 10 ? 2 : 1);
+  const BIG = 1e9;           // stand-in for infinity, so equal opposite beams of infinite intensity still cancel exactly
+  const sliderToVal = p => p <= 0 ? 0 : Number((10 ** (p / 1000 * 4 - 2)).toPrecision(3));   // 0.01 to 100, log scale
+  const valToSlider = v => !(v > 0) ? 0 : Math.min(1000, Math.max(1, Math.round((Math.log10(Math.min(v, BIG)) + 2) / 4 * 1000)));
+  const fmtVal = v => v === Infinity ? '∞' : String(Number(v.toPrecision(4)));
+  function parseI(str) {
+    const t = str.trim().toLowerCase();
+    if (['inf', 'infinity', '∞', 'oo'].includes(t)) return Infinity;
+    const v = parseFloat(t);
+    return Number.isFinite(v) ? Math.max(0, v) : null;
+  }
+
+  /* ---------- physics ---------- */
+  // Each beam has a Gaussian amplitude profile exp(-r²/w²), scaled by sqrt(I), so its peak intensity is I.
+  // Beams of exactly equal wavelength are coherent: their signed amplitudes add, then the sum is squared.
+  // Beams of different wavelengths beat far too fast to see, so their intensities simply add.
+  function activeGroups() {
+    const map = new Map();
+    for (const s of state.src) {
+      if (!s.on || !(s.I > 0)) continue;
+      const k = keyOf(s.wl);
+      let g = map.get(k);
+      if (!g) { const c = wlLinear(s.wl); g = { r: enc(c[0]) / 255, g: enc(c[1]) / 255, b: enc(c[2]) / 255, beams: [] }; map.set(k, g); }
+      g.beams.push({ x: s.x, y: s.y, iw2: 1 / (s.w * s.w), a: (s.ph ? -1 : 1) * Math.sqrt(Math.min(s.I, BIG)) });
+    }
+    return [...map.values()];
+  }
+  function intensityAt(x, y, groups = activeGroups()) {
+    let total = 0;
+    for (const gr of groups) {
+      let A = 0;
+      for (const b of gr.beams) { const dx = x - b.x, dy = y - b.y; A += b.a * Math.exp(-(dx * dx + dy * dy) * b.iw2); }
+      total += A * A;
+    }
+    return total;
+  }
+
+  /* ---------- rendering ---------- */
+  const cv = document.getElementById('cv');
+  const view = cv.getContext('2d');
+  const mkCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  const raw = mkCanvas(W, H), rctx = raw.getContext('2d');
+  const img = rctx.createImageData(W, H);
+  const levels = [2, 4, 8, 16, 32].map(d => { const c = mkCanvas(Math.ceil(W / d), Math.ceil(H / d)); return { d, c, ctx: c.getContext('2d') }; });
+  const canBlur = 'filter' in view;
+
+  function render() {
+    const groups = activeGroups();
+    const ng = groups.length, data = img.data;
+    let p = 0;
+    for (let py = 0; py < H; py++) {
+      const y = MM_H / 2 - (py + 0.5) * PX;
+      for (let px = 0; px < W; px++) {
+        const x = (px + 0.5) * PX - MM_W / 2;
+        let fr = 0, fg = 0, fb = 0;
+        for (let k = 0; k < ng; k++) {
+          const gr = groups[k], bs = gr.beams;
+          let A = 0;
+          for (let j = 0; j < bs.length; j++) {
+            const b = bs[j], dx = x - b.x, dy = y - b.y;
+            const e = (dx * dx + dy * dy) * b.iw2;
+            if (e < 60) A += b.a * Math.exp(-e);
+          }
+          const I = A * A;
+          fr += I * gr.r; fg += I * gr.g; fb += I * gr.b;
+        }
+        data[p]     = 255 * (1 - Math.exp(-EXPO * fr));
+        data[p + 1] = 255 * (1 - Math.exp(-EXPO * fg));
+        data[p + 2] = 255 * (1 - Math.exp(-EXPO * fb));
+        data[p + 3] = 255;
+        p += 4;
+      }
+    }
+    rctx.putImageData(img, 0, 0);
+
+    const base = SURF[state.surface];
+    view.globalAlpha = 1;
+    view.globalCompositeOperation = 'source-over';
+    view.filter = 'none';
+    view.fillStyle = `rgb(${base[0]},${base[1]},${base[2]})`;
+    view.fillRect(0, 0, W, H);
+    view.globalCompositeOperation = 'lighter';
+    view.drawImage(raw, 0, 0);
+
+    // glow: progressively smaller copies, drawn back wide and soft
+    let prev = raw;
+    for (const l of levels) {
+      l.ctx.imageSmoothingEnabled = true;
+      l.ctx.clearRect(0, 0, l.c.width, l.c.height);
+      l.ctx.drawImage(prev, 0, 0, l.c.width, l.c.height);
+      prev = l.c;
+    }
+    view.imageSmoothingEnabled = true;
+    for (const [i, a] of [[2, 0.4], [3, 0.45], [4, 0.5]]) {
+      const l = levels[i];
+      view.globalAlpha = a;
+      if (canBlur) view.filter = `blur(${Math.round(l.d / 2)}px)`;
+      view.drawImage(l.c, 0, 0, W, H);
+    }
+    view.filter = 'none';
+    view.globalAlpha = 1;
+    view.globalCompositeOperation = 'source-over';
+  }
+  let pending = false;
+  const schedule = () => { if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; render(); }); } };
+
+  /* ---------- UI: cards ---------- */
+  const rail = document.getElementById('rail');
+  const screen = document.getElementById('screen');
+  const cards = [];
+
+  function buildCard(i) {
+    const el = document.createElement('section');
+    el.className = 'card';
+    el.innerHTML = `
+      <header class="card-h">
+        <span class="dot"></span><h2>Laser ${i + 1}</h2>
+        <label class="switch"><input type="checkbox" id="on${i}" role="switch"><span class="track"></span><span class="sr">Laser ${i + 1} on</span></label>
+      </header>
+      <div class="row"><label class="lbl" for="sl${i}">Wavelength</label>
+        <div class="wl">
+          <input type="range" class="spec" id="sl${i}" min="${WL_MIN}" max="${WL_MAX}" step="1">
+          <input type="text" id="nu${i}" class="num" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Laser ${i + 1} wavelength in nanometres, ${WL_MIN} to ${WL_MAX}">
+          <span class="unit">nm</span>
+        </div></div>
+      <div class="row"><label class="lbl" for="si${i}">Intensity</label>
+        <div class="int3">
+          <input type="range" id="si${i}" min="0" max="1000" step="1">
+          <input type="text" id="ni${i}" class="num" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Laser ${i + 1} intensity, 0 to infinity">
+          <button type="button" class="inf" id="in${i}" aria-pressed="false" title="Infinite intensity" aria-label="Set intensity to infinity">∞</button>
+        </div></div>
+      <div class="row"><span class="lbl" id="pl${i}">Phase</span>
+        <div class="seg" role="group" aria-labelledby="pl${i}" style="justify-self:start">
+          <button type="button" data-ph="0" aria-pressed="true">0°</button>
+          <button type="button" data-ph="180" aria-pressed="false">180°</button>
+        </div></div>
+      <p class="hint" id="hi${i}"></p>
+      <div class="row"><label class="lbl" for="wi${i}">Spot radius</label>
+        <div class="int">
+          <input type="range" id="wi${i}" min="3" max="45" step="0.5">
+          <output id="wo${i}" class="num ro"></output>
+        </div></div>`;
+    rail.appendChild(el);
+
+    const q = s => el.querySelector(s);
+    const h = document.createElement('button');
+    h.type = 'button'; h.className = 'handle'; h.textContent = String(i + 1);
+    h.setAttribute('aria-label', `Move laser ${i + 1} spot. Arrow keys nudge it.`);
+    screen.appendChild(h);
+
+    const c = { el, h, on: q(`#on${i}`), sl: q(`#sl${i}`), nu: q(`#nu${i}`), si: q(`#si${i}`), ni: q(`#ni${i}`), inf: q(`#in${i}`),
+      ph: [...el.querySelectorAll('[data-ph]')], hint: q(`#hi${i}`), wi: q(`#wi${i}`), wo: q(`#wo${i}`) };
+    cards.push(c);
+
+    c.on.addEventListener('change', () => { state.src[i].on = c.on.checked; syncAll(); });
+    c.sl.addEventListener('input', () => { state.src[i].wl = +c.sl.value; syncAll(i); });
+    c.nu.addEventListener('change', () => {
+      const v = parseFloat(c.nu.value);
+      if (Number.isFinite(v)) state.src[i].wl = Math.round(clamp(v, WL_MIN, WL_MAX) * 10) / 10;
+      syncAll();
+    });
+    c.nu.addEventListener('keydown', e => { if (e.key === 'Enter') c.nu.blur(); });
+    c.ph.forEach(b => b.addEventListener('click', () => { state.src[i].ph = +b.dataset.ph; syncAll(); }));
+    c.si.addEventListener('input', () => { state.src[i].I = sliderToVal(+c.si.value); syncAll(i); });
+    c.ni.addEventListener('change', () => {
+      const v = parseI(c.ni.value);
+      if (v !== null) state.src[i].I = v;
+      syncAll();
+      c.ni.value = fmtVal(state.src[i].I);
+    });
+    c.ni.addEventListener('keydown', e => { if (e.key === 'Enter') c.ni.blur(); });
+    c.inf.addEventListener('click', () => { state.src[i].I = state.src[i].I === Infinity ? 1 : Infinity; syncAll(); });
+    c.wi.addEventListener('input', () => { state.src[i].w = +c.wi.value; syncAll(i); });
+
+    // drag and keyboard on the marker
+    h.addEventListener('pointerdown', e => { e.preventDefault(); h.setPointerCapture(e.pointerId); h.dataset.drag = '1'; });
+    h.addEventListener('pointermove', e => {
+      if (h.dataset.drag !== '1') return;
+      const r = screen.getBoundingClientRect();
+      state.src[i].x = clamp(((e.clientX - r.left) / r.width - 0.5) * MM_W, -MM_W / 2, MM_W / 2);
+      state.src[i].y = clamp((0.5 - (e.clientY - r.top) / r.height) * MM_H, -MM_H / 2, MM_H / 2);
+      syncAll(i);
+    });
+    const end = () => { h.dataset.drag = '0'; };
+    h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end);
+    h.addEventListener('keydown', e => {
+      const step = e.shiftKey ? 5 : 1, s = state.src[i];
+      const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      s.x = clamp(s.x + d[0], -MM_W / 2, MM_W / 2); s.y = clamp(s.y + d[1], -MM_H / 2, MM_H / 2);
+      syncAll(i);
+    });
+  }
+
+  function hintFor(i) {
+    const s = state.src[i];
+    if (!s.on) return '';
+    if (!(s.I > 0)) return 'Intensity is 0, so this beam adds no light.';
+    const key = keyOf(s.wl), same = [], close = [];
+    state.src.forEach((o, j) => {
+      if (j === i || !o.on || !(o.I > 0)) return;
+      if (keyOf(o.wl) === key) same.push(j + 1);
+      else if (Math.abs(o.wl - s.wl) <= 10) close.push(j + 1);
+    });
+    const names = a => a.map(n => 'Laser ' + n).join(' and ');
+    const out = [];
+    if (same.length) out.push(`Interferes with ${names(same)} (same wavelength).`);
+    if (close.length) out.push(`${names(close)} is close but not equal, so it only adds light.`);
+    if (!out.length) out.push('No other beam shares this wavelength, so phase changes nothing.');
+    return out.join(' ');
+  }
+
+  function syncCard(i, skip) {
+    const s = state.src[i], c = cards[i], col = wlCss(s.wl);
+    c.el.style.setProperty('--c', col);
+    c.el.classList.toggle('off', !s.on);
+    c.h.style.setProperty('--hc', col);
+    c.h.classList.toggle('off', !s.on || !(s.I > 0));
+    c.h.style.left = ((s.x / MM_W + 0.5) * 100) + '%';
+    c.h.style.top = ((0.5 - s.y / MM_H) * 100) + '%';
+    c.on.checked = s.on;
+    c.inf.setAttribute('aria-pressed', String(s.I === Infinity));
+    if (skip !== i) c.si.value = valToSlider(s.I);
+    if (document.activeElement !== c.ni || skip === i) c.ni.value = fmtVal(s.I);
+    c.ph.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.ph === s.ph)));
+    c.wo.textContent = s.w.toFixed(1) + ' mm';
+    const hint = hintFor(i);
+    c.hint.textContent = hint;
+    c.hint.classList.toggle('on', hint.startsWith('Interferes'));
+    if (skip !== i) c.wi.value = s.w;
+    if (document.activeElement !== c.sl || skip !== i) c.sl.value = Math.round(s.wl);
+    if (document.activeElement !== c.nu) c.nu.value = String(s.wl);
+    else if (skip === i) c.nu.value = String(s.wl);
+  }
+  function syncAll(skip) {
+    for (let i = 0; i < 3; i++) syncCard(i, skip);
+    schedule();
+  }
+
+  /* ---------- toolbar ---------- */
+  document.getElementById('presets').addEventListener('click', e => {
+    const b = e.target.closest('[data-preset]'); if (!b) return;
+    state.src = PRESETS[b.dataset.preset]();
+    syncAll();
+  });
+  const surfBtns = [...document.querySelectorAll('#surface button')];
+  surfBtns.forEach(b => b.addEventListener('click', () => {
+    state.surface = b.dataset.surf;
+    surfBtns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    schedule();
+  }));
+  document.getElementById('markers').addEventListener('change', e => {
+    state.markers = e.target.checked;
+    screen.classList.toggle('no-markers', !state.markers);
+  });
+
+  /* ---------- hover readout ---------- */
+  const readout = document.getElementById('readout');
+  const idle = readout.textContent;
+  screen.addEventListener('pointermove', e => {
+    if (e.target.closest('.handle')) return;
+    const r = screen.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width - 0.5) * MM_W;
+    const y = (0.5 - (e.clientY - r.top) / r.height) * MM_H;
+    readout.innerHTML = `<span>x ${x.toFixed(1)} mm</span><span>y ${y.toFixed(1)} mm</span><span>I ${fmtI(intensityAt(x, y))}</span>`;
+  });
+  screen.addEventListener('pointerleave', () => { readout.textContent = idle; });
+
+  /* ---------- boot ---------- */
+  for (let i = 0; i < 3; i++) buildCard(i);
+  syncAll();
+})();
+</script>
+
+</body></html>
